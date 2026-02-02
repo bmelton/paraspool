@@ -12,5 +12,5 @@ Layer height: 0.2 mm or 0.16 mm. given the 1 mm wall thickness, this ensures 
 
 Print in PETG or above if you use your AMS heater. PLA might be fine in original AMS units. 
 
-![Setting diameter to '200' and text to 'Polymaker'](https://github.com/user-attachments/assets/73a08202-f09b-49bf-972d-b5acf6731f03")
+![Setting diameter to '200' and text to 'Polymaker']("https://github.com/user-attachments/assets/73a08202-f09b-49bf-972d-b5acf6731f03")
 <img width="482" height="385" alt="image" src="https://github.com/user-attachments/assets/497d7937-bee8-49c6-b33b-7431c2a823c1" />
