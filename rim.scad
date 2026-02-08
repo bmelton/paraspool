@@ -1,68 +1,87 @@
-// An actually universal spool rim adapter.
-/* [parameters] */
-// The actual diameter of the cardboard spool (measure this!)
-spool_diameter = 194;
+// An actually universal cardboard spool rim adapter for AMSes.
 
-// Extra clearance so the adapter slides on easily (0.2 - 0.5 recommended)
-tolerance = 0.2;
+/* [Preset Selection] */
+// Select your spool brand. Choose "Custom" to use manual settings below.
+spool_type = "AICOPYTO"; // [AICOPYTO, Elegoo, Inland, Custom]
 
-// text to be cut out of the nameplate.
-label_text = "AICOPYTO";
+/* [Manual Settings] */
+// Only used if spool_type is "Custom". Diameter of the cardboard spool.
+manual_spool_diameter = 200;
 
-// width of the horizontal rim face, in mm
+// Only used if spool_type is "Custom". Text to be cut out.
+manual_label_text = "CUSTOM";
+
+/* [General Parameters] */
+// Extra clearance so the adapter slides on easily
+tolerance = 0.4;
+
+// Width of the horizontal rim face
 rim_width = 6;
-// height of the vertical lip face, in mm
+
+// Height of the vertical lip face
 lip_height = 6;
 
-// thickness of the L-profile walls, in mm
+// Thickness of the L-profile walls
 wall_thickness = 1;
 
-// font size for the label
+// Font size for the label
 font_size = 8;
 
-// how far the plate extends from the inner edge toward the center
+// How far the plate extends from the inner edge toward the center
 plate_depth = 17;
-// font
+
+// Font: If you don't use a stencil font, the center of your letters will fall out. It's not a problem really, but be warned.
 font = "Allerta Stencil:style=Regular";
 
 /* [hidden] */
 $fn = 200;
 
-// Logic Fix: Calculate dimensions based on the SPOOL being the inside
-// The hole in the lip must be Spool + Tolerance
+// PRESETS
+// Units: 196mm (7.72"), 200mm (7.87")
+
+// 1. Determine Diameter
+spool_diameter = 
+    (spool_type == "AICOPYTO") ? 193 : // Proven good value on H2C w/ 0.4 tolerance
+    (spool_type == "Elegoo")   ? 200 : 
+    (spool_type == "Inland")   ? 198 : // example value
+    manual_spool_diameter;             // defaults to custom
+
+// 2. Determine Label
+label_text = 
+    (spool_type == "AICOPYTO") ? "AICOPYTO" : 
+    (spool_type == "Elegoo")   ? "ELEGOO" : 
+    (spool_type == "Inland")   ? "INLAND" : 
+    manual_label_text;                 // defaults to custom
+
+// Calculated dimensions
+// lip_inner_diameter: spool_diameter + tolerance
+// 196mm + 0.2mm = 196.2mm (7.724")
 lip_inner_diameter = spool_diameter + tolerance;
-
-// The outside of the lip is the Hole + Walls
 lip_outer_diameter = lip_inner_diameter + (wall_thickness * 2);
-
-// The hole in the center of the ring (visual only)
 center_hole_diameter = lip_inner_diameter - (rim_width * 2);
 
 module l_profile_ring() {
     union() {
-        // horizontal face (rim) - Fits against the side of the spool
+        // horizontal face (rim)
         linear_extrude(wall_thickness)
             difference() {
                 circle(d = lip_outer_diameter);
                 circle(d = center_hole_diameter);
             }
 
-        // vertical face (lip) - Sleeves over the edge of the spool
+        // vertical face (lip)
         linear_extrude(lip_height)
             difference() {
                 circle(d = lip_outer_diameter);
-                // This is now defined by the spool size + tolerance
                 circle(d = lip_inner_diameter);
             }
     }
 }
 
 module nameplate_stencil() {
-    // infinite_width just needs to be wide enough to cut the shape
     infinite_width = lip_outer_diameter;
 
     difference() {
-        // 1. the shelf geometry (clipped to circle)
         intersection() {
             linear_extrude(wall_thickness)
                 translate([-infinite_width/2, -(center_hole_diameter/2), 0])
@@ -72,12 +91,10 @@ module nameplate_stencil() {
                 circle(d = center_hole_diameter);
         }
 
-        // 2. the text cutout (stencil) with mirror fix
         if (label_text != "") {
-             // Adjusted translation to account for new center_hole logic
             translate([0, -(center_hole_diameter/2) + (plate_depth/2), -1])
                 linear_extrude(wall_thickness + 2)
-                    mirror([1, 0, 0]) // reverses text direction for face-down printing
+                    mirror([1, 0, 0]) 
                         text(label_text, size = font_size, halign = "center", valign = "center", font = font);
         }
     }
