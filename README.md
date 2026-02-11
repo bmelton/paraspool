@@ -39,8 +39,9 @@ This list is almost certainly not exhaustive, but it's every reputable brand I k
 
 - [ ] 3DJake
 - [x] AICOPYTO
+- [ ] Anycubic
 - [ ] Azurefilm
-- [ ] DEEPLEE
+- [x] DEEPLEE
 - [ ] Duramic
 - [x] Elegoo
 - [ ] Eryone
@@ -49,8 +50,8 @@ This list is almost certainly not exhaustive, but it's every reputable brand I k
 - [x] Inland
 - [ ] Matter3D
 - [x] Overture
-- [x] Polymaker PolyTerra
-- [x] Polymaker PolyLite
+- [x] Polymaker PanChroma / PolyTerra
+- [ ] Polymaker PolyLite
 - [ ] Polymaker PolyMax / PolySonic / Draft (I believe these are all the same spool)
 - [ ] PrintedSolid
 - [ ] ProtoPasta
