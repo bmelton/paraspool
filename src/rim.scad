@@ -2,7 +2,7 @@
 
 /* [Preset Selection] */
 // Select your spool brand. Choose "Custom" to use manual settings below.
-spool_type = "AICOPYTO"; // [AICOPYTO, Elegoo, Inland, Custom, Overture, Polymaker, Sunlu]
+spool_type = "AICOPYTO"; // [AICOPYTO, DEEPLEE, Elegoo, Inland, Overture, Polymaker, Sunlu, Custom]
 
 /* [Manual Settings] */
 // Only used if spool_type is "Custom". Diameter of the cardboard spool.
@@ -42,6 +42,7 @@ $fn = 200;
 // 1. Determine Diameter
 spool_diameter = 
     (spool_type == "AICOPYTO") ? 193 : 
+    (spool_type == "DEEPLEE") ? 195.8 :
     (spool_type == "Elegoo")   ? 199 : 
     (spool_type == "Inland")   ? 199 : 
     (spool_type == "Overture") ? 199.5 :
@@ -52,6 +53,7 @@ spool_diameter =
 // 2. Determine Label
 label_text = 
     (spool_type == "AICOPYTO") ? "AICOPYTO" : 
+    (spool_type == "DEEPLEE") ? "DEEPLEE" :
     (spool_type == "Elegoo")   ? "ELEGOO" : 
     (spool_type == "Inland")   ? "INLAND" : 
     (spool_type == "Overture") ? "OVERTURE" :

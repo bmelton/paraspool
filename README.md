@@ -25,3 +25,32 @@ label_text = "Polymaker";
 ## License
 
 Just a small note on licensing, but while the software assets are MIT-licensed (as shown in the LICENSE.md,) the STL artifacts are released as CC-BY. That is of course reflected by the LICENSE.md in the `assets/` folder. I only note it here because it is not necessarily obvious to look in a subfolder for a separate license, but I understand this is common in open hardware projects (I'm a noob here.)
+
+## ROADMAP
+
+This isn't a roadmap so much as it is a braindump of things I'd like to do in the future. 
+
+- I really want to incorporate the eSun cardboard spools, specifically because of [this project](https://makerworld.com/en/models/1234875-reusable-cardboard-spool-ams-lite-compatible?from=recommend#profileId-1254346)
+- I understand that Polymaker has two sizes of spools. I've yet to encounter more than the one, which is covered, but I'd like to seek out the other.
+
+## Coverage
+
+This list is almost certainly not exhaustive, but it's every reputable brand I know about. Feel free to add a PR for any additional spools, *particularly* those that are cardboard. 
+
+- [ ] 3DJake
+- [x] AICOPYTO
+- [ ] Azurefilm
+- [ ] DEEPLEE
+- [ ] Duramic
+- [x] Elegoo
+- [ ] Eryone
+- [ ] eSun
+- [ ] FormFutura
+- [x] Inland
+- [ ] Matter3D
+- [x] Overture
+- [x] Polymaker PolyTerra
+- [x] Polymaker PolyLite
+- [ ] Polymaker PolyMax / PolySonic / Draft (I believe these are all the same spool)
+- [ ] PrintedSolid
+- [ ] ProtoPasta
