@@ -43,6 +43,7 @@ $fn = 200;
 spool_diameter = 
     (spool_type == "AICOPYTO") ? 193 : 
     (spool_type == "DEEPLEE") ? 195.8 :
+    (spool_type == "eSUN") ? 198 :
     (spool_type == "Elegoo")   ? 199 : 
     (spool_type == "Inland")   ? 199 : 
     (spool_type == "Overture") ? 199.5 :
@@ -54,6 +55,7 @@ spool_diameter =
 label_text = 
     (spool_type == "AICOPYTO") ? "AICOPYTO" : 
     (spool_type == "DEEPLEE") ? "DEEPLEE" :
+    (spool_type == "eSUN") ? "ESUN" :
     (spool_type == "Elegoo")   ? "ELEGOO" : 
     (spool_type == "Inland")   ? "INLAND" : 
     (spool_type == "Overture") ? "OVERTURE" :
