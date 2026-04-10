@@ -39,20 +39,28 @@ This isn't a roadmap so much as it is a braindump of things I'd like to do in th
 This list is almost certainly not exhaustive, but it's every reputable brand I know about. Feel free to add a PR for any additional spools, *particularly* those that are cardboard. 
 
 - [ ] 3DJake
+- [ ] 3DHoJor
 - [x] AICOPYTO
 - [ ] Anycubic
 - [ ] Azurefilm
+- [ ] CC3D
+- [ ] Creality
 - [x] DEEPLEE
 - [ ] Duramic
 - [x] Elegoo
 - [ ] Eryone
-- [ ] eSun
+- [x] eSun
 - [ ] FormFutura
 - [x] Inland
+- [ ] Justmaker
+- [ ] Landu
 - [ ] Matter3D
+- [ ] NextShapes
 - [x] Overture
+- [x] OVV3D
 - [x] Polymaker PanChroma / PolyTerra
 - [ ] Polymaker PolyLite
 - [ ] Polymaker PolyMax / PolySonic / Draft (I believe these are all the same spool)
 - [ ] PrintedSolid
 - [ ] ProtoPasta
+- [ ] SainSmart
