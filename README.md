@@ -47,9 +47,12 @@ I'm including them as a starting point, but nobody should rely on them. If you h
 This list is almost certainly not exhaustive, but it's every reputable brand I know about. Feel free to add a PR for any additional spools, *particularly* those that are cardboard. 
 
 - [ ] 3DJake
+- [ ] 3DHoJor
 - [x] AICOPYTO
 - [ ] Anycubic
 - [ ] Azurefilm
+- [ ] CC3D
+- [ ] Creality
 - [x] DEEPLEE
 - [ ] Duramic
 - [x] Elegoo
@@ -57,10 +60,15 @@ This list is almost certainly not exhaustive, but it's every reputable brand I k
 - [x] eSun
 - [ ] FormFutura
 - [x] Inland
+- [ ] Justmaker
+- [ ] Landu
 - [ ] Matter3D
+- [ ] NextShapes
 - [x] Overture
+- [x] OVV3D
 - [x] Polymaker PanChroma / PolyTerra
 - [ ] Polymaker PolyLite
 - [ ] Polymaker PolyMax / PolySonic / Draft (I believe these are all the same spool)
 - [ ] PrintedSolid
 - [ ] ProtoPasta
+- [ ] SainSmart
