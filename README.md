@@ -34,6 +34,14 @@ This isn't a roadmap so much as it is a braindump of things I'd like to do in th
 - I really want to incorporate the eSun cardboard spools, specifically because of [this project](https://makerworld.com/en/models/1234875-reusable-cardboard-spool-ams-lite-compatible?from=recommend#profileId-1254346)
 - I understand that Polymaker has two sizes of spools. I've yet to encounter more than the one, which is covered, but I'd like to seek out the other.
 
+## A note about eSun
+
+I was originally working with redditor /u/5skinnn for eSun spools, and he noted irregularities, spool to spool. So I did the only thing that made sense to me and ordered some eSun spools for myself. Long story short, eSun is frustrating. Anyone who is telling you they've got a bulletproof eSun spool adapter is lying. 
+
+As of this, I've added eSunLarge and an eSunSmall assets, representing the biggest range I've encountered, but eSun spools are remarkably un-uniform. I printed a spool at 200.5mm and it fits *perfectly* on my eSun spool. I hit 'Print again' for the other size, and it slips right off. On one single eSun spool, the outer diameter variance is more than 1mm from one side to the other. 
+
+I'm including them as a starting point, but nobody should rely on them. If you have one of each outer diameter, you'll probably have one to fit an eSun spool.   
+
 ## Coverage
 
 This list is almost certainly not exhaustive, but it's every reputable brand I know about. Feel free to add a PR for any additional spools, *particularly* those that are cardboard. 
