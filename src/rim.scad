@@ -50,7 +50,7 @@ spool_diameter =
     (spool_type == "Overture") ? 199.5 :
     (spool_type == "Polymaker") ? 199.5 :  
     (spool_type == "Sunlu") ? 199.5 :
-    (spool_type == "Snapmaker") ? 199 :
+    (spool_type == "Snapmaker") ? 199.5 :
     (spool_type == "eSunLarge") ? 200.5 :
     manual_spool_diameter;             // defaults to custom
 
