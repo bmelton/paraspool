@@ -87,15 +87,19 @@ def scad_literal(v) -> str:
     return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def render_argv(exe: str, workdir: Path) -> list[str]:
+    """Constant command line: OrcaSlicer persists process permissions keyed on str(argv),
+    so parameters live in main.scad rather than -D flags."""
+    return [exe, "--backend=Manifold", "--export-format=binstl", "-o", str(workdir / STL_NAME), str(workdir / "main.scad")]
+
+
 def render(exe: str, workdir: Path, params: dict, timeout: int = 120) -> tuple[Path, float]:
     """Run rim.scad with the given overrides. Returns (binary STL path, seconds)."""
     workdir.mkdir(parents=True, exist_ok=True)
-    scad = workdir / "rim.scad"
-    scad.write_bytes(asset("rim.scad"))
+    (workdir / "rim.scad").write_bytes(asset("rim.scad"))
     font = workdir / "AllertaStencil-Regular.ttf"
     if not font.exists():
         font.write_bytes(asset("AllertaStencil-Regular.ttf"))
-    out = workdir / STL_NAME
 
     defs = {
         "spool_type": "Custom",
@@ -105,19 +109,18 @@ def render(exe: str, workdir: Path, params: dict, timeout: int = 120) -> tuple[P
     for k in ("tolerance", "rim_width", "lip_height", "wall_thickness", "font_size"):
         if k in params and params[k] is not None:
             defs[k] = float(params[k])
+    # In OpenSCAD the last assignment in a scope wins, so overrides after the include take effect.
+    (workdir / "main.scad").write_text(
+        "include <rim.scad>\n" + "".join(f"{k} = {scad_literal(v)};\n" for k, v in defs.items()))
 
-    args = [exe, "--backend=Manifold", "--export-format=binstl", "-o", str(out)]
-    for k, v in defs.items():
-        args += ["-D", f"{k}={scad_literal(v)}"]
-    args.append(str(scad))
-
+    args = render_argv(exe, workdir)
+    out = Path(args[4])
     env = dict(os.environ, OPENSCAD_FONT_PATH=str(workdir))
     t0 = time.time()
     proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=env)
     if proc.returncode != 0 and "backend" in proc.stderr.lower():
         # ponytail: older OpenSCAD without --backend; retry on CGAL
-        args.remove("--backend=Manifold")
-        proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=env)
+        proc = subprocess.run([a for a in args if a != "--backend=Manifold"], capture_output=True, text=True, timeout=timeout, env=env)
     if proc.returncode != 0 or not out.exists():
         raise RuntimeError("OpenSCAD failed:\n" + (proc.stderr or proc.stdout).strip()[-1500:])
     return out, time.time() - t0
@@ -172,13 +175,16 @@ def macos_app_bundle() -> str | None:
     return None
 
 
+def macos_open_argv(path: Path) -> list[str]:
+    return ["/usr/bin/open", "-a", macos_app_bundle() or "OrcaSlicer", str(path)]
+
+
 def send_to_plate(path: Path) -> bool:
     payload = escape_cstyle([host_executable(), str(path)])
     if os.name == "nt":
         return _send_windows(payload)
     if sys.platform == "darwin":
-        app = macos_app_bundle() or "OrcaSlicer"
-        return subprocess.run(["/usr/bin/open", "-a", app, str(path)], capture_output=True, timeout=10).returncode == 0
+        return subprocess.run(macos_open_argv(path), capture_output=True, timeout=10).returncode == 0
     return _send_dbus(payload)
 
 
@@ -263,27 +269,31 @@ if orca is not None:
                 return page_html()
 
             def on_message(self, msg):
+                # Runs on the UI thread inside the host's audit scope, so a permission prompt is
+                # synchronous. Plugin-spawned threads are denied first time (fail closed), so the
+                # OpenSCAD run stays here; it takes well under a second with Manifold.
                 if isinstance(msg, str):
                     msg = json.loads(msg)
                 t = msg.get("type")
-                if t == "hello":
-                    exe = find_openscad()
-                    self.post_message({"type": "hello", "presets": presets(), "default_brand": "Polymaker",
-                                       "openscad": openscad_version(exe) if exe else None})
-                elif t == "render":
-                    threading.Thread(target=self._render, args=(msg["params"],), daemon=True).start()
-                elif t == "send":
-                    threading.Thread(target=self._send, args=(msg["path"],), daemon=True).start()
-
-            def _render(self, params):
                 try:
-                    exe = find_openscad()
-                    if not exe:
-                        raise RuntimeError("OpenSCAD not found.")
-                    stl, secs = render(exe, workdir(), params)
-                    pos, n = stl_positions(stl.read_bytes())
-                    self.post_message({"type": "mesh", "path": str(stl), "triangles": n, "seconds": secs,
-                                       "positions": base64.b64encode(pos).decode()})
+                    if t == "hello":
+                        exe = find_openscad()
+                        self.post_message({"type": "hello", "presets": presets(), "default_brand": "Polymaker",
+                                           "openscad": Path(exe).name if exe else None})
+                    elif t == "render":
+                        exe = find_openscad()
+                        if not exe:
+                            raise RuntimeError("OpenSCAD not found.")
+                        stl, secs = render(exe, workdir(), msg["params"])
+                        pos, n = stl_positions(stl.read_bytes())
+                        self.post_message({"type": "mesh", "path": str(stl), "triangles": n, "seconds": secs,
+                                           "positions": base64.b64encode(pos).decode()})
+                    elif t == "send":
+                        if os.name == "nt":
+                            # SendMessageW to Orca's own window from the UI thread would deadlock.
+                            threading.Thread(target=self._send, args=(msg["path"],), daemon=True).start()
+                        else:
+                            self._send(msg["path"])
                 except Exception as e:  # surfaced in the page, not swallowed
                     self.post_message({"type": "error", "message": str(e)})
 
@@ -309,6 +319,14 @@ if orca is not None:
     @orca.plugin
     class ParaspoolPlugin(orca.base):
         def register_capabilities(self):
+            try:
+                exe = find_openscad()
+                procs = [str(render_argv(exe, workdir()))] if exe else []
+                if sys.platform == "darwin":
+                    procs.append(str(macos_open_argv(workdir() / STL_NAME)))
+                orca.request_permissions(process=procs, threading=os.name == "nt")
+            except Exception:
+                pass  # older host without request_permissions: first use prompts instead
             orca.register_capability(_Capability)
 
 
