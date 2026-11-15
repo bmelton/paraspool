@@ -1,0 +1,13 @@
+{
+  "AICOPYTO":  { "diameter": 193,   "label": "AICOPYTO" },
+  "DEEPLEE":   { "diameter": 195.8, "label": "DEEPLEE" },
+  "eSunSmall": { "diameter": 198,   "label": "ESUN" },
+  "Elegoo":    { "diameter": 199,   "label": "ELEGOO" },
+  "Inland":    { "diameter": 199,   "label": "INLAND" },
+  "OVV3D":     { "diameter": 199,   "label": "OVV3D" },
+  "Overture":  { "diameter": 199.5, "label": "OVERTURE" },
+  "Polymaker": { "diameter": 199.5, "label": "POLYMAKER" },
+  "Snapmaker": { "diameter": 199.5, "label": "SNAPMAKER" },
+  "Sunlu":     { "diameter": 199.5, "label": "SUNLU" },
+  "eSunLarge": { "diameter": 200.5, "label": "ESUN" }
+}

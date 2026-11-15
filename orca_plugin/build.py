@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""Bundle src/paraspool.py + assets into dist/paraspool.py (the file users install)."""
+import base64, gzip, sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE / "src"))
+import paraspool  # noqa: E402
+
+src = (HERE / "src" / "paraspool.py").read_text()
+embedded = {k: base64.b64encode(gzip.compress(p.read_bytes(), 9)).decode() for k, p in paraspool._DEV_PATHS.items()}
+marker = "_EMBEDDED: dict[str, str] = {}"
+assert marker in src
+lines = ["_EMBEDDED: dict[str, str] = {"] + [f"    {k!r}: {v!r}," for k, v in embedded.items()] + ["}"]
+out = src.replace(marker, "\n".join(lines), 1)
+dist = HERE / "dist"; dist.mkdir(exist_ok=True)
+(dist / "paraspool.py").write_text(out)
+print(f"wrote dist/paraspool.py ({len(out) // 1024} KB)")
