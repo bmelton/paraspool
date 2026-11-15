@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Paraspool</title>
+<style>
+  :root { color-scheme: light dark; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 14px var(--orca-font, system-ui, sans-serif); background: var(--orca-bg, #fff); color: var(--orca-fg, #111);
+         display: grid; grid-template-columns: 300px 1fr; grid-template-rows: 100%; }
+  aside { padding: 16px; border-right: 1px solid var(--orca-border, #ddd); overflow-y: auto; box-sizing: border-box; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: var(--orca-muted, #666); margin: 0 0 16px; font-size: 12px; }
+  label { display: block; margin: 10px 0 4px; font-weight: 600; font-size: 12px; }
+  .hint { font-weight: 400; color: var(--orca-muted, #666); }
+  input, select { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--orca-border, #ccc);
+                  border-radius: 6px; background: var(--orca-bg, #fff); color: var(--orca-fg, #111); font: inherit; }
+  input:disabled { opacity: .5; }
+  button { width: 100%; margin-top: 12px; padding: 9px; border: 0; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer;
+           background: var(--orca-accent, #009688); color: var(--orca-accent-fg, #fff); }
+  button.secondary { background: transparent; color: var(--orca-fg, #111); border: 1px solid var(--orca-border, #ccc); }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { margin-top: 12px; font-size: 12px; min-height: 2.5em; color: var(--orca-muted, #666); white-space: pre-wrap; }
+  #status.err { color: #d33; }
+  main { position: relative; min-width: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #nogl { position: absolute; inset: 0; display: none; place-items: center; color: var(--orca-muted, #666); text-align: center; padding: 24px; }
+  details { margin-top: 12px; } summary { cursor: pointer; font-weight: 600; font-size: 12px; }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Paraspool</h1>
+  <p class="sub">Rim adapter for cardboard spools in an AMS.</p>
+
+  <label for="brand">Spool brand</label>
+  <select id="brand"></select>
+
+  <label for="diameter">Spool diameter <span class="hint">mm, measured across the cardboard</span></label>
+  <input id="diameter" type="number" step="0.1" min="150" max="260">
+
+  <label for="label">Label <span class="hint">leave empty for none</span></label>
+  <input id="label" type="text" maxlength="14">
+
+  <label for="tolerance">Tolerance <span class="hint">mm added to the diameter</span></label>
+  <input id="tolerance" type="number" step="0.05" min="0" max="2" value="0.4">
+
+  <details>
+    <summary>Advanced</summary>
+    <label for="rim_width">Rim width</label><input id="rim_width" type="number" step="0.5" min="2" max="20" value="6">
+    <label for="lip_height">Lip height</label><input id="lip_height" type="number" step="0.5" min="2" max="20" value="6">
+    <label for="wall_thickness">Wall thickness</label><input id="wall_thickness" type="number" step="0.2" min="0.6" max="4" value="1">
+    <label for="font_size">Font size</label><input id="font_size" type="number" step="0.5" min="4" max="14" value="8">
+  </details>
+
+  <button id="render">Render preview</button>
+  <button id="send" class="secondary" disabled>Send to plate</button>
+  <div id="status">Connecting…</div>
+</aside>
+<main>
+  <canvas id="c"></canvas>
+  <div id="nogl">3D preview needs WebGL, which this webview doesn't have.<br>Rendering and "Send to plate" still work.</div>
+</main>
+
+<script>/*THREE_JS*/</script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const fields = ["diameter", "label", "tolerance", "rim_width", "lip_height", "wall_thickness", "font_size"];
+  let presets = {}, lastStl = null, rendering = false, dirty = true;
+
+  function setStatus(msg, err) { $("status").textContent = msg; $("status").className = err ? "err" : ""; }
+  function params() {
+    const p = {};
+    for (const f of fields) p[f] = f === "label" ? $(f).value : parseFloat($(f).value);
+    return p;
+  }
+  function applyBrand() {
+    const b = $("brand").value, p = presets[b];
+    if (p) { $("diameter").value = p.diameter; $("label").value = p.label; }
+    $("diameter").disabled = $("label").disabled = !!p;
+    markDirty();
+  }
+  function markDirty() { dirty = true; $("send").disabled = true; }
+  function render() {
+    if (rendering) return;
+    const p = params();
+    if (!(p.diameter > 0)) return setStatus("Enter a spool diameter.", true);
+    rendering = true; $("render").disabled = true; setStatus("Rendering with OpenSCAD…");
+    orca.postMessage({ type: "render", params: p });
+  }
+
+  // --- three.js preview ---------------------------------------------------
+  let three = null;
+  function initThree() {
+    if (typeof THREE === "undefined") return false;
+    const canvas = $("c");
+    let renderer;
+    try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); } catch (e) { return false; }
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(40, 1, 1, 5000);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x444466, 1.1));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(1, 1, 2); scene.add(sun);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x8e6fd1, metalness: 0.05, roughness: 0.6, side: THREE.DoubleSide });
+    let mesh = null;
+    // ponytail: hand-rolled orbit (drag = rotate, wheel = zoom) instead of OrbitControls, which needs ES modules.
+    const orbit = { theta: 0.6, phi: 1.0, dist: 500, cx: 0, cy: 0, cz: 0 };
+    let drag = null;
+    canvas.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener("pointermove", e => {
+      if (!drag) return;
+      orbit.theta -= (e.clientX - drag.x) * 0.01;
+      orbit.phi = Math.min(Math.PI - 0.05, Math.max(0.05, orbit.phi - (e.clientY - drag.y) * 0.01));
+      drag = { x: e.clientX, y: e.clientY }; draw();
+    });
+    canvas.addEventListener("pointerup", () => drag = null);
+    canvas.addEventListener("wheel", e => { e.preventDefault(); orbit.dist *= Math.exp(e.deltaY * 0.001); draw(); }, { passive: false });
+
+    function resize() {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      if (canvas.width !== w || canvas.height !== h) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+    }
+    function draw() {
+      resize();
+      const s = Math.sin(orbit.phi);
+      camera.position.set(orbit.cx + orbit.dist * s * Math.cos(orbit.theta), orbit.cy + orbit.dist * s * Math.sin(orbit.theta), orbit.cz + orbit.dist * Math.cos(orbit.phi));
+      camera.up.set(0, 0, 1); camera.lookAt(orbit.cx, orbit.cy, orbit.cz);
+      renderer.setClearColor(getComputedStyle(document.body).backgroundColor || "#fff");
+      renderer.render(scene, camera);
+    }
+    function setMesh(positions) {
+      if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      g.computeVertexNormals(); g.computeBoundingSphere();
+      mesh = new THREE.Mesh(g, mat); scene.add(mesh);
+      const bs = g.boundingSphere; orbit.cx = bs.center.x; orbit.cy = bs.center.y; orbit.cz = bs.center.z; orbit.dist = bs.radius * 2.6;
+      draw();
+    }
+    new ResizeObserver(draw).observe(canvas);
+    draw();
+    return { setMesh };
+  }
+  three = initThree();
+  if (!three) $("nogl").style.display = "grid";
+
+  // --- bridge -------------------------------------------------------------
+  function b64ToF32(b64) {
+    const bin = atob(b64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Float32Array(bytes.buffer);
+  }
+  orca.onMessage(msg => {
+    if (typeof msg === "string") msg = JSON.parse(msg);
+    switch (msg.type) {
+      case "hello":
+        presets = msg.presets;
+        for (const name of Object.keys(presets).concat("Custom")) { const o = document.createElement("option"); o.value = o.textContent = name; $("brand").append(o); }
+        $("brand").value = msg.default_brand || "Custom"; applyBrand();
+        if (msg.openscad) { setStatus("OpenSCAD " + msg.openscad); render(); }
+        else setStatus("OpenSCAD not found. Install it from openscad.org (a 2023+ snapshot), then restart OrcaSlicer.", true);
+        break;
+      case "mesh":
+        rendering = false; dirty = false; lastStl = msg.path;
+        $("render").disabled = false; $("send").disabled = false;
+        if (three) three.setMesh(b64ToF32(msg.positions));
+        setStatus(`Rendered ${msg.triangles.toLocaleString()} triangles in ${msg.seconds.toFixed(1)}s.`);
+        break;
+      case "sent":
+        setStatus(msg.ok ? "Sent to plate. Check the Prepare tab." : "Couldn't hand the file to OrcaSlicer.\nImport it manually: " + lastStl, !msg.ok);
+        $("send").disabled = false;
+        break;
+      case "error":
+        rendering = false; $("render").disabled = false;
+        setStatus(msg.message, true);
+        break;
+    }
+  });
+
+  $("brand").addEventListener("change", applyBrand);
+  for (const f of fields) $(f).addEventListener("input", markDirty);
+  $("render").addEventListener("click", render);
+  $("send").addEventListener("click", () => {
+    if (dirty || !lastStl) return render();
+    $("send").disabled = true; setStatus("Sending to plate…");
+    orca.postMessage({ type: "send", path: lastStl });
+  });
+  orca.postMessage({ type: "hello" });
+})();
+</script>
+</body>
+</html>

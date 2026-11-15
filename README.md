@@ -8,6 +8,24 @@ The presets here for existing spools (like Polymaker, Inland, Elegoo, etc.) have
 
 This relies on [Allerta Stencil](https://fonts.google.com/specimen/Allerta+Stencil) - a stencil font that is of course easy to install locally, but may not work at all on the Makerworld customizer. If you're okay with the centers of your letters falling out, this is still good. If you don't need labels, this is great - just leave the string empty.
 
+# Layout
+
+- `openscad/src/rim.scad` — the model. The brand preset block is generated; don't edit it by hand.
+- `presets/brand_presets.json` — the single source of truth for brands. After editing, run `python3 openscad/gen_presets.py`.
+- `orca_plugin/` — OrcaSlicer 2.5+ plugin. `python3 orca_plugin/build.py` bundles `src/paraspool.py`, the page, three.js, the font and the presets into `orca_plugin/dist/paraspool.py`.
+
+# OrcaSlicer plugin
+
+Adds a **Paraspool** tab next to Prepare/Preview/Device: pick a brand or type a diameter, preview the part, and send it to the plate.
+
+1. Install [OpenSCAD](https://openscad.org/downloads.html) (a 2023+ snapshot; 2021.01 works but is slow).
+2. Download `paraspool.py` from the latest release.
+3. In OrcaSlicer: Plugins → arrow next to *Browse plugins* → *Install local plugin*, pick the file, restart OrcaSlicer.
+
+The plugin shells out to your OpenSCAD and ships the Allerta Stencil font, so labels come out as stencils even if the font isn't installed. On first run OrcaSlicer will ask permission to launch a process (OpenSCAD) and to write files (the STL).
+
+Self-check: `python3 orca_plugin/src/paraspool.py /tmp/work` renders a test part and asserts the plumbing.
+
 # Printing recommendations
 
 Layer height: 0.2 mm or 0.16 mm. Given the 1 mm wall thickness, this ensures 5–6 solid layers, which is critical for the structural integrity of the stencil bridges.

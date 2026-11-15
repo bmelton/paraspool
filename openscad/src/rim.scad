@@ -1,8 +1,10 @@
 // An actually universal cardboard spool rim adapter for AMSes.
 
+// BEGIN GENERATED PRESETS (edit presets/brand_presets.json, then run openscad/gen_presets.py)
 /* [Preset Selection] */
 // Select your spool brand. Choose "Custom" to use manual settings below.
-spool_type = "AICOPYTO"; // [AICOPYTO, DEEPLEE, eSunSmall, eSunLarge, Elegoo, Inland, Overture, OVV3D, Polymaker, Snapmaker, Sunlu, Custom]
+spool_type = "AICOPYTO"; // [AICOPYTO, DEEPLEE, eSunSmall, Elegoo, Inland, OVV3D, Overture, Polymaker, Snapmaker, Sunlu, eSunLarge, Custom]
+// END GENERATED PRESETS
 
 /* [Manual Settings] */
 // Only used if spool_type is "Custom". Diameter of the cardboard spool.
@@ -36,39 +38,35 @@ font = "Allerta Stencil:style=Regular";
 /* [hidden] */
 $fn = 200;
 
-// PRESETS
-// Units: 196mm (7.72"), 200mm (7.87")
-
-// 1. Determine Diameter
-spool_diameter = 
-    (spool_type == "AICOPYTO") ? 193 : 
+// BEGIN GENERATED LOOKUP
+spool_diameter =
+    (spool_type == "AICOPYTO") ? 193 :
     (spool_type == "DEEPLEE") ? 195.8 :
     (spool_type == "eSunSmall") ? 198 :
-    (spool_type == "Elegoo")   ? 199 : 
-    (spool_type == "Inland")   ? 199 : 
-    (spool_type == "OVV3D")    ? 199 :
+    (spool_type == "Elegoo") ? 199 :
+    (spool_type == "Inland") ? 199 :
+    (spool_type == "OVV3D") ? 199 :
     (spool_type == "Overture") ? 199.5 :
-    (spool_type == "Polymaker") ? 199.5 :  
-    (spool_type == "Sunlu") ? 199.5 :
+    (spool_type == "Polymaker") ? 199.5 :
     (spool_type == "Snapmaker") ? 199.5 :
+    (spool_type == "Sunlu") ? 199.5 :
     (spool_type == "eSunLarge") ? 200.5 :
-    manual_spool_diameter;             // defaults to custom
+    manual_spool_diameter;
 
-// 2. Determine Label
-label_text = 
-    (spool_type == "AICOPYTO") ? "AICOPYTO" : 
+label_text =
+    (spool_type == "AICOPYTO") ? "AICOPYTO" :
     (spool_type == "DEEPLEE") ? "DEEPLEE" :
-    (spool_type == "Elegoo")   ? "ELEGOO" : 
-    (spool_type == "Inland")   ? "INLAND" : 
-    (spool_type == "OVV3D")    ? "OVV3D" :
+    (spool_type == "eSunSmall") ? "ESUN" :
+    (spool_type == "Elegoo") ? "ELEGOO" :
+    (spool_type == "Inland") ? "INLAND" :
+    (spool_type == "OVV3D") ? "OVV3D" :
     (spool_type == "Overture") ? "OVERTURE" :
     (spool_type == "Polymaker") ? "POLYMAKER" :
-    (spool_type == "Sunlu") ? "SUNLU" :
     (spool_type == "Snapmaker") ? "SNAPMAKER" :
-    (spool_type == "eSunSmall") ? "ESUN" :
+    (spool_type == "Sunlu") ? "SUNLU" :
     (spool_type == "eSunLarge") ? "ESUN" :
-
-    manual_label_text;                 // defaults to custom
+    manual_label_text;
+// END GENERATED LOOKUP
 
 // Calculated dimensions
 // lip_inner_diameter: spool_diameter + tolerance
