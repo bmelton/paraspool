@@ -5,7 +5,7 @@
 # name = "Paraspool"
 # description = "Parametric rim adapter for cardboard filament spools in an AMS. Pick a brand or enter a diameter, preview, send to plate."
 # author = "Barry Melton"
-# version = "0.1.0"
+# version = "1.0.0"
 # license = "MIT"
 # ///
 """Paraspool: OrcaSlicer Pages plugin wrapping openscad/src/rim.scad.
