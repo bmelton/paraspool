@@ -13,13 +13,13 @@ This relies on [Allerta Stencil](https://fonts.google.com/specimen/Allerta+Stenc
 - `openscad/src/rim.scad` — the model, for OpenSCAD and the Makerworld customizer. The brand preset block is generated; don't edit it by hand.
 - `python/rim.py` — the same model in Python on [manifold3d](https://github.com/elalish/manifold), no OpenSCAD needed. `uv run python/rim.py --diameter 199.5 --label POLYMAKER -o out.stl`; with no `--diameter` it runs a self-check against OpenSCAD reference numbers.
 - `presets/brand_presets.json` — the single source of truth for brands. After editing, run `python3 openscad/gen_presets.py`.
-- `orca_plugin/` — OrcaSlicer 2.5+ plugin. `python3 orca_plugin/build.py` bundles `src/paraspool.py`, `python/rim.py`, the page, three.js, the font and the presets into `orca_plugin/dist/paraspool.py`.
+- `orca_plugin/` — OrcaSlicer 2.5+ plugin. `python3 orca_plugin/build.py` bundles `src/paraspool.py`, `python/rim.py`, the page, three.js, the font and the presets into `orca_plugin/dist/paraspool_v<version>_any.py`, the file to upload to OrcaCloud.
 
 # OrcaSlicer plugin
 
 Adds a **Paraspool** tab next to Prepare/Preview/Device: pick a brand or type a diameter, preview the part, and send it to the plate.
 
-Install it from *Plugins → Browse plugins* in OrcaSlicer, or download `paraspool.py` from the latest release and use *Install local plugin*. OrcaSlicer installs the two Python dependencies (manifold3d, fonttools) itself; nothing else to set up. The stencil font is bundled.
+Install it from *Plugins → Browse plugins* in OrcaSlicer, or download the `paraspool_v*_any.py` from the latest release and use *Install local plugin*. OrcaSlicer installs the two Python dependencies (manifold3d, fonttools) itself; nothing else to set up. The stencil font is bundled.
 
 Self-check: `python3 orca_plugin/src/paraspool.py /tmp/work` renders a test part and asserts the plumbing (needs `manifold3d` and `fonttools` in your Python).
 

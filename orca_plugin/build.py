@@ -19,5 +19,10 @@ rim_body = rim.split("from __future__ import annotations\n", 1)[1].split('\nif _
 assert "# RIM_PY_INLINE" in out
 out = out.replace("# RIM_PY_INLINE", rim_body, 1)
 dist = HERE / "dist"; dist.mkdir(exist_ok=True)
-(dist / "paraspool.py").write_text(out)
-print(f"wrote dist/paraspool.py ({len(out) // 1024} KB)")
+import re
+version = re.search(r'^# version = "([^"]+)"', src, re.M).group(1)
+for stale in dist.glob("paraspool*.py"):
+    stale.unlink()
+name = f"paraspool_v{version}_any.py"  # versioned so the upload target is unambiguous
+(dist / name).write_text(out)
+print(f"wrote dist/{name} ({len(out) // 1024} KB)")
