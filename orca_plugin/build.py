@@ -13,6 +13,11 @@ marker = "_EMBEDDED: dict[str, str] = {}"
 assert marker in src
 lines = ["_EMBEDDED: dict[str, str] = {"] + [f"    {k!r}: {v!r}," for k, v in embedded.items()] + ["}"]
 out = src.replace(marker, "\n".join(lines), 1)
+# Inline python/rim.py (everything after its `from __future__` line) so the release needs no repo.
+rim = (HERE.parent / "python" / "rim.py").read_text()
+rim_body = rim.split("from __future__ import annotations\n", 1)[1].split('\nif __name__ == "__main__":', 1)[0]
+assert "# RIM_PY_INLINE" in out
+out = out.replace("# RIM_PY_INLINE", rim_body, 1)
 dist = HERE / "dist"; dist.mkdir(exist_ok=True)
 (dist / "paraspool.py").write_text(out)
 print(f"wrote dist/paraspool.py ({len(out) // 1024} KB)")

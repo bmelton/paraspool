@@ -1,14 +1,14 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = []
+# dependencies = ["manifold3d>=3", "fonttools"]
 # [tool.orcaslicer.plugin]
 # name = "Paraspool"
 # description = "Parametric rim adapter for cardboard filament spools in an AMS. Pick a brand or enter a diameter, preview, send to plate."
 # author = "Barry Melton"
-# version = "1.0.0"
+# version = "2.0.0"
 # license = "MIT"
 # ///
-"""Paraspool: OrcaSlicer Pages plugin wrapping openscad/src/rim.scad.
+"""Paraspool: OrcaSlicer Pages plugin around python/rim.py (a manifold3d port of openscad/src/rim.scad).
 
 Dev layout reads assets from the repo; the release build (build.py) inlines them
 into _EMBEDDED so dist/paraspool.py is a single file.
@@ -21,7 +21,6 @@ import json
 import os
 import platform
 import shutil
-import struct
 import subprocess
 import sys
 import threading
@@ -34,7 +33,6 @@ _HERE = Path(__file__).resolve().parent
 _DEV_PATHS = {
     "page.html": _HERE / "page.html",
     "three.min.js": _HERE.parent / "vendor" / "three.min.js",
-    "rim.scad": _HERE.parent.parent / "openscad" / "src" / "rim.scad",
     "AllertaStencil-Regular.ttf": _HERE.parent.parent / "openscad" / "fonts" / "AllertaStencil-Regular.ttf",
     "brand_presets.json": _HERE.parent.parent / "presets" / "brand_presets.json",
 }
@@ -58,86 +56,26 @@ def page_html() -> str:
 
 # --- OpenSCAD ----------------------------------------------------------------
 
-def find_openscad() -> str | None:
-    cands = [shutil.which("openscad"), shutil.which("openscad-nightly")]
-    if sys.platform == "darwin":
-        cands += ["/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD", "/opt/homebrew/bin/openscad"]
-    elif os.name == "nt":
-        for base in (os.environ.get("ProgramFiles", r"C:\Program Files"), os.environ.get("ProgramFiles(x86)", "")):
-            if base:
-                cands += [os.path.join(base, "OpenSCAD", "openscad.exe"), os.path.join(base, "OpenSCAD (Nightly)", "openscad.exe")]
-    else:
-        cands += ["/usr/bin/openscad", "/usr/local/bin/openscad", shutil.which("org.openscad.OpenSCAD")]
-    for c in cands:
-        if c and Path(c).is_file():
-            return c
-    return None
+# --- renderer (python/rim.py, manifold3d) ------------------------------------------
+# Dev: import from the repo checkout. Release: build.py pastes rim.py below the marker.
+try:
+    sys.path.insert(0, str(_HERE.parent.parent / "python"))
+    from rim import build, stl_bytes, triangles
+except ImportError:
+    pass
+# RIM_PY_INLINE
 
 
-def openscad_version(exe: str) -> str:
-    out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=20)
-    return (out.stdout + out.stderr).strip().replace("OpenSCAD version ", "")
-
-
-def scad_literal(v) -> str:
-    if isinstance(v, bool):
-        return "true" if v else "false"
-    if isinstance(v, (int, float)):
-        return repr(float(v)) if isinstance(v, float) else str(v)
-    return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"'
-
-
-def render_argv(exe: str, workdir: Path) -> list[str]:
-    """Constant command line: OrcaSlicer persists process permissions keyed on str(argv),
-    so parameters live in main.scad rather than -D flags."""
-    return [exe, "--backend=Manifold", "--export-format=binstl", "-o", str(workdir / STL_NAME), str(workdir / "main.scad")]
-
-
-def render(exe: str, workdir: Path, params: dict, timeout: int = 120) -> tuple[Path, float]:
-    """Run rim.scad with the given overrides. Returns (binary STL path, seconds)."""
-    workdir.mkdir(parents=True, exist_ok=True)
-    (workdir / "rim.scad").write_bytes(asset("rim.scad"))
-    font = workdir / "AllertaStencil-Regular.ttf"
-    if not font.exists():
-        font.write_bytes(asset("AllertaStencil-Regular.ttf"))
-
-    defs = {
-        "spool_type": "Custom",
-        "manual_spool_diameter": float(params["diameter"]),
-        "manual_label_text": str(params.get("label", "")),
-    }
-    for k in ("tolerance", "rim_width", "lip_height", "wall_thickness", "font_size"):
-        if k in params and params[k] is not None:
-            defs[k] = float(params[k])
-    # In OpenSCAD the last assignment in a scope wins, so overrides after the include take effect.
-    (workdir / "main.scad").write_text(
-        "include <rim.scad>\n" + "".join(f"{k} = {scad_literal(v)};\n" for k, v in defs.items()))
-
-    args = render_argv(exe, workdir)
-    out = Path(args[4])
-    env = dict(os.environ, OPENSCAD_FONT_PATH=str(workdir))
+def render(workdir: Path, params: dict) -> tuple[Path, bytes, int, float]:
+    """Build the part. Returns (STL path, float32 xyz per triangle vertex, triangle count, seconds)."""
     t0 = time.time()
-    proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=env)
-    if proc.returncode != 0 and "backend" in proc.stderr.lower():
-        # ponytail: older OpenSCAD without --backend; retry on CGAL
-        proc = subprocess.run([a for a in args if a != "--backend=Manifold"], capture_output=True, text=True, timeout=timeout, env=env)
-    if proc.returncode != 0 or not out.exists():
-        raise RuntimeError("OpenSCAD failed:\n" + (proc.stderr or proc.stdout).strip()[-1500:])
-    return out, time.time() - t0
-
-
-def stl_positions(data: bytes) -> tuple[bytes, int]:
-    """Binary STL -> (float32 xyz triples for every triangle vertex, triangle count)."""
-    if len(data) < 84:
-        raise ValueError("STL too short")
-    n = struct.unpack_from("<I", data, 80)[0]
-    if 84 + 50 * n != len(data):
-        raise ValueError("Not a binary STL")
-    out = bytearray(n * 36)
-    for i in range(n):
-        off = 84 + 50 * i + 12  # skip normal
-        out[i * 36:(i + 1) * 36] = data[off:off + 36]
-    return bytes(out), n
+    kw = {k: float(params[k]) for k in ("tolerance", "rim_width", "lip_height", "wall_thickness", "font_size")
+          if params.get(k) is not None}
+    m = build(float(params["diameter"]), str(params.get("label", "")), font=asset("AllertaStencil-Regular.ttf"), **kw)
+    workdir.mkdir(parents=True, exist_ok=True)
+    out = workdir / STL_NAME
+    out.write_bytes(stl_bytes(m))
+    return out, triangles(m).tobytes(), m.num_tri(), time.time() - t0
 
 
 # --- handing the STL to OrcaSlicer's plater -------------------------------------
@@ -271,21 +209,15 @@ if orca is not None:
             def on_message(self, msg):
                 # Runs on the UI thread inside the host's audit scope, so a permission prompt is
                 # synchronous. Plugin-spawned threads are denied first time (fail closed), so the
-                # OpenSCAD run stays here; it takes well under a second with Manifold.
+                # render stays here; manifold3d takes a fraction of a second.
                 if isinstance(msg, str):
                     msg = json.loads(msg)
                 t = msg.get("type")
                 try:
                     if t == "hello":
-                        exe = find_openscad()
-                        self.post_message({"type": "hello", "presets": presets(), "default_brand": "Polymaker",
-                                           "openscad": Path(exe).name if exe else None})
+                        self.post_message({"type": "hello", "presets": presets(), "default_brand": "Polymaker"})
                     elif t == "render":
-                        exe = find_openscad()
-                        if not exe:
-                            raise RuntimeError("OpenSCAD not found.")
-                        stl, secs = render(exe, workdir(), msg["params"])
-                        pos, n = stl_positions(stl.read_bytes())
+                        stl, pos, n, secs = render(workdir(), msg["params"])
                         self.post_message({"type": "mesh", "path": str(stl), "triangles": n, "seconds": secs,
                                            "positions": base64.b64encode(pos).decode()})
                     elif t == "send":
@@ -320,10 +252,7 @@ if orca is not None:
     class ParaspoolPlugin(orca.base):
         def register_capabilities(self):
             try:
-                exe = find_openscad()
-                procs = [str(render_argv(exe, workdir()))] if exe else []
-                if sys.platform == "darwin":
-                    procs.append(str(macos_open_argv(workdir() / STL_NAME)))
+                procs = [str(macos_open_argv(workdir() / STL_NAME))] if sys.platform == "darwin" else []
                 orca.request_permissions(process=procs, threading=os.name == "nt")
             except Exception:
                 pass  # older host without request_permissions: first use prompts instead
@@ -335,21 +264,11 @@ if orca is not None:
 def _selfcheck():
     assert escape_cstyle(["orca-slicer", "/tmp/a.stl"]) == "orca-slicer;/tmp/a.stl"
     assert escape_cstyle([r"C:\Program Files\Orca\orca.exe", r"C:\x y\a.stl"]) == r'"C:\\Program Files\\Orca\\orca.exe";"C:\\x y\\a.stl"'
-    assert scad_literal('SAY "HI"') == '"SAY \\"HI\\""' and scad_literal(199.5) == "199.5" and scad_literal(6) == "6"
     assert "/*THREE_JS*/" not in page_html() and "REVISION=" in page_html()
     assert "Polymaker" in presets() and presets()["Polymaker"]["diameter"] == 199.5
-    # one real triangle: 80 header + count + (normal + 3 verts + attr)
-    tri = struct.pack("<12f", 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0) + b"\0\0"
-    pos, n = stl_positions(b"\0" * 80 + struct.pack("<I", 1) + tri)
-    assert n == 1 and struct.unpack("<9f", pos) == (0, 0, 0, 1, 0, 0, 0, 1, 0)
-    exe = find_openscad()
-    if exe:
-        out, secs = render(exe, Path(sys.argv[1]) if len(sys.argv) > 1 else _HERE / "work", {"diameter": 199.5, "label": "TEST", "tolerance": 0.4})
-        pos, n = stl_positions(out.read_bytes())
-        assert n > 1000 and len(pos) == n * 36, (n, len(pos))
-        print(f"rendered {n} triangles in {secs:.1f}s -> {out}")
-    else:
-        print("OpenSCAD not found; skipped render check")
+    out, pos, n, secs = render(Path(sys.argv[1]) if len(sys.argv) > 1 else _HERE / "work", {"diameter": 199.5, "label": "TEST", "tolerance": 0.4})
+    assert n > 1000 and len(pos) == n * 36 and out.stat().st_size == 84 + 50 * n, (n, len(pos))
+    print(f"rendered {n} triangles in {secs:.2f}s -> {out}")
     print("selfcheck ok")
 
 

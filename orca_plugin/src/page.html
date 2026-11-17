@@ -86,7 +86,7 @@
     if (rendering) return;
     const p = params();
     if (!(p.diameter > 0)) return setStatus("Enter a spool diameter.", true);
-    rendering = true; $("render").disabled = true; setStatus("Rendering with OpenSCAD…");
+    rendering = true; $("render").disabled = true; setStatus("Rendering…");
     orca.postMessage({ type: "render", params: p });
   }
 
@@ -157,8 +157,7 @@
         presets = msg.presets;
         for (const name of Object.keys(presets).concat("Custom")) { const o = document.createElement("option"); o.value = o.textContent = name; $("brand").append(o); }
         $("brand").value = msg.default_brand || "Custom"; applyBrand();
-        if (msg.openscad) { setStatus("OpenSCAD " + msg.openscad); render(); }
-        else setStatus("OpenSCAD not found. Install it from openscad.org (a 2023+ snapshot), then restart OrcaSlicer.", true);
+        render();
         break;
       case "mesh":
         rendering = false; dirty = false; lastStl = msg.path;
